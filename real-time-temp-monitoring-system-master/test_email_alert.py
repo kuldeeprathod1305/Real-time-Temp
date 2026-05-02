@@ -7,6 +7,10 @@ import sys
 import os
 from pathlib import Path
 
+# Force UTF-8 output on Windows
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -146,9 +150,9 @@ def test_alert_status():
 def main():
     """Run all tests"""
     print("\n")
-    print(" " * 70)
-    print("  🌡️  TEMPERATURE MONITORING SYSTEM - EMAIL ALERT TEST")
-    print(" " * 70)
+    print("=" * 70)
+    print("  TEMPERATURE MONITORING SYSTEM - EMAIL ALERT TEST")
+    print("=" * 70)
     
     tests = [
         ("Email Credentials", test_email_credentials),

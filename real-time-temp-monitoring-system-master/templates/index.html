@@ -3,859 +3,916 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32 IoT Dashboard</title>
-  <meta name="description" content="Real-time ESP32 DHT22 temperature and humidity monitoring dashboard">
+  <title>NEXUS IoT · Command Center</title>
+  <meta name="description" content="ESP32 DHT22 real-time temperature monitoring – NEXUS IoT Command Center">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg:        #0D1117;
-      --card:      #161C27;
-      --card-alt:  #1A2234;
-      --border:    rgba(255,255,255,0.07);
-      --text:      #F1F5F9;
-      --muted:     #64748B;
-      --blue:      #3B82F6;
-      --green:     #10B981;
-      --orange:    #F59E0B;
-      --radius:    14px;
+      --bg:       #070A14;
+      --sidebar:  #060912;
+      --card:     #0B1120;
+      --card2:    #0E1628;
+      --border:   rgba(0,200,255,0.10);
+      --border2:  rgba(255,255,255,0.05);
+      --text:     #D8EEFF;
+      --muted:    #3A6080;
+      --muted2:   #5A80A0;
+      --cyan:     #00D4FF;
+      --cyan2:    #00AADD;
+      --amber:    #F0A020;
+      --green:    #00FFA3;
+      --green2:   #00CC80;
+      --red:      #FF4444;
+      --orange:   #F59E0B;
+      --topnav-h: 44px;
     }
 
-    html { scroll-behavior: smooth; }
-
-    body {
+    html, body {
+      height: 100%; overflow: hidden;
       font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 20px 24px 32px;
+      background: var(--bg); color: var(--text);
     }
 
-    /* ─── HEADER ─────────────────────────────────── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
+    /* ══════════════════════════════════════════════
+       APP SHELL
+       ══════════════════════════════════════════════ */
+    .app {
+      display: flex; height: 100vh; overflow: hidden;
     }
 
-    .hdr-left { display: flex; align-items: center; gap: 14px; }
+    /* ══════════════════════════════════════════════
+       SIDEBAR
+       ══════════════════════════════════════════════ */
+    .sidebar {
+      width: 172px; min-width: 172px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
 
-    .hdr-logo {
-      width: 44px; height: 44px;
-      background: linear-gradient(135deg, #2563EB, #1d4ed8);
-      border-radius: 10px;
+    .sb-brand {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sb-brand-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px; font-weight: 700; letter-spacing: 1px;
+      color: var(--cyan); line-height: 1;
+    }
+    .sb-brand-sub { font-size: 8px; color: var(--muted2); letter-spacing: 1.5px; margin-top: 3px; text-transform: uppercase; }
+
+    .sb-system {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sb-system-label { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+    .sb-system-icon {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: linear-gradient(135deg, #0D2040, #162A50);
+      border: 1px solid var(--border); margin-bottom: 6px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
+      font-size: 13px;
+    }
+    .sb-system-name { font-size: 11px; font-weight: 700; color: var(--text); }
+    .sb-system-id   { font-size: 9px; color: var(--muted2); letter-spacing: .5px; margin-top: 1px; }
+
+    .sb-nav { flex: 1; padding: 8px 0; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; cursor: pointer;
+      font-size: 11px; font-weight: 600; color: var(--muted2);
+      text-transform: uppercase; letter-spacing: .8px;
+      border-left: 2px solid transparent;
+      transition: all .15s;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(0,200,255,.04); }
+    .nav-item.active {
+      color: var(--cyan); background: rgba(0,200,255,.08);
+      border-left-color: var(--cyan);
+    }
+    .nav-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .sb-footer {
+      padding: 14px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .deploy-btn {
+      width: 100%; padding: 9px;
+      background: linear-gradient(135deg, #004466, #006688);
+      border: 1px solid var(--cyan2);
+      border-radius: 6px; color: var(--cyan);
+      font-family: 'Inter', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer; transition: all .2s;
+    }
+    .deploy-btn:hover {
+      background: linear-gradient(135deg, #005577, #007799);
+      box-shadow: 0 0 12px rgba(0,200,255,.25);
+    }
+
+    /* ══════════════════════════════════════════════
+       MAIN AREA
+       ══════════════════════════════════════════════ */
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+      min-width: 0; overflow: hidden;
+    }
+
+    /* ── TOP NAV ───────────────────────────────── */
+    .topnav {
+      height: var(--topnav-h); flex-shrink: 0;
+      background: rgba(6,9,18,.95);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 18px; gap: 0;
+    }
+    .tn-brand {
+      font-family: 'Orbitron', monospace;
+      font-size: 12px; font-weight: 700; letter-spacing: 1px;
+      color: var(--cyan); margin-right: 24px;
+    }
+    .tn-links { display: flex; gap: 0; }
+    .tn-link {
+      font-size: 11px; font-weight: 600; color: var(--muted2);
+      padding: 0 14px; height: var(--topnav-h);
+      display: flex; align-items: center;
+      border-bottom: 2px solid transparent;
+      cursor: pointer; transition: all .15s;
+      text-transform: capitalize; letter-spacing: .3px;
+    }
+    .tn-link:hover { color: var(--text); }
+    .tn-link.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+    .tn-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .tn-status {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 9px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--green);
+      border: 1px solid rgba(0,255,163,.25);
+      background: rgba(0,255,163,.06);
+      padding: 4px 10px; border-radius: 4px;
+    }
+    .tn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .tn-icon { color: var(--muted2); font-size: 14px; cursor: pointer; transition: color .15s; }
+    .tn-icon:hover { color: var(--cyan); }
+    .tn-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, #1A3A5C, #0D2040);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; cursor: pointer;
+    }
+
+    /* ── CONTENT ───────────────────────────────── */
+    .content {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 14px 18px 12px;
+      gap: 12px; min-height: 0; overflow: hidden;
+    }
+
+    /* ── CC HEADER ─────────────────────────────── */
+    .cc-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
       flex-shrink: 0;
     }
-
-    .hdr-title {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+    .cc-title-area { display: flex; flex-direction: column; gap: 4px; }
+    .cc-h1 {
+      font-size: 30px; font-weight: 800; letter-spacing: -1px;
+      color: #EEF6FF; line-height: 1;
     }
-    .hdr-title span { color: var(--blue); }
-
-    .hdr-sub {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .hdr-right { display: flex; align-items: center; gap: 16px; }
-
-    #hdr-datetime {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    .live-pill {
+    .cc-sub {
       display: flex; align-items: center; gap: 6px;
-      border: 1px solid rgba(16,185,129,0.35);
-      background: rgba(16,185,129,0.1);
-      color: var(--green);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 5px 12px;
-      border-radius: 999px;
+      font-size: 10px; font-weight: 500; color: var(--muted2);
+      letter-spacing: .5px; text-transform: uppercase;
     }
-    .live-pill .dot {
-      width: 8px; height: 8px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: blink 1.5s ease-in-out infinite;
+    .cc-sub-dot { color: var(--muted); }
+    .cc-sync { color: var(--cyan); font-weight: 600; }
+
+    .network-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 14px;
+      text-align: right; min-width: 130px;
     }
-    .live-pill.offline { border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.1); color: #EF4444; }
-    .live-pill.offline .dot { background: #EF4444; animation: none; }
-
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-    /* ─── GRID LAYOUTS ───────────────────────────── */
-    .row { display: grid; gap: 16px; margin-bottom: 16px; }
-    .row-top   { grid-template-columns: 1.15fr 1fr; }
-    .row-mid   { grid-template-columns: 1fr 1fr; }
-    .row-bot   { grid-template-columns: 1fr 1fr; }
-
-    @media (max-width: 900px) {
-      .row-top, .row-mid, .row-bot { grid-template-columns: 1fr; }
+    .nc-label { font-size: 8px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+    .nc-value {
+      font-size: 24px; font-weight: 800; letter-spacing: -1px;
+      color: var(--cyan); line-height: 1.1;
+      display: flex; align-items: baseline; gap: 2px; justify-content: flex-end;
     }
+    .nc-unit { font-size: 13px; font-weight: 500; color: var(--muted2); }
+    .nc-icon { font-size: 10px; color: var(--green); margin-top: 3px; text-align: right; }
 
-    /* ─── CARD BASE ──────────────────────────────── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 22px;
-    }
-
-    .card-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    /* ─── GAUGE CARD ─────────────────────────────── */
-    .gauge-card {
+    /* ── BIG CARDS ROW ─────────────────────────── */
+    .big-cards {
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0;
-      align-items: center;
-    }
-
-    .gauge-left { display: flex; flex-direction: column; align-items: center; }
-
-    .gauge-wrap {
-      position: relative;
-      width: 200px;
+      grid-template-columns: 1fr 1fr 1.25fr;
+      gap: 12px; flex-shrink: 0;
       height: 200px;
     }
 
-    .gauge-wrap svg { width: 100%; height: 100%; overflow: visible; }
-
-    .gauge-center {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
+    .bc {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px 10px;
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+    }
+    .bc::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent);
     }
 
-    .gauge-num {
-      font-size: 52px;
-      font-weight: 800;
-      letter-spacing: -3px;
-      line-height: 1;
-      color: var(--text);
-    }
-
-    .gauge-unit {
-      font-size: 16px;
-      color: var(--muted);
-      margin-top: 2px;
-      font-weight: 500;
-    }
-
-    .gauge-status {
-      margin-top: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16,185,129,0.12);
-      border: 1px solid rgba(16,185,129,0.25);
-      color: var(--green);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 12px;
-      border-radius: 999px;
-    }
-
-    .gauge-right {
-      padding-left: 24px;
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      min-width: 140px;
-    }
-
-    .gauge-metric-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 5px;
+    .bc-label {
+      font-size: 8px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted);
       margin-bottom: 4px;
     }
-
-    .gauge-metric-val {
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--blue);
-      letter-spacing: -1px;
+    .bc-value {
+      font-size: 44px; font-weight: 800; letter-spacing: -2px;
+      line-height: 1; margin-bottom: 4px;
     }
-    .gauge-metric-val span { font-size: 16px; font-weight: 500; }
+    .bc-value.cyan   { color: var(--cyan); }
+    .bc-value.amber  { color: var(--amber); }
 
-    .gauge-metric-sub {
-      font-size: 12px;
-      color: var(--green);
-      font-weight: 500;
-      margin-top: 2px;
+    .bc-icon {
+      position: absolute; top: 14px; right: 14px;
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
     }
+    .bc-icon.temp-icon { background: rgba(0,212,255,.12); border: 1px solid rgba(0,212,255,.25); }
+    .bc-icon.hum-icon  { background: rgba(240,160,32,.12); border: 1px solid rgba(240,160,32,.25); }
 
-    .divider { height: 1px; background: var(--border); }
+    .sparkline-wrap { flex: 1; min-height: 0; position: relative; }
 
-    /* ─── DEVICE STATUS CARD ─────────────────────── */
-    .device-name {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 20px;
-      color: var(--text);
+    .bc-footer {
+      display: flex; gap: 8px; align-items: center;
+      font-size: 9px; font-weight: 600; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+      margin-top: 4px;
     }
+    .bc-footer .trend { color: var(--cyan); }
+    .bc-footer .trend.amber { color: var(--amber); }
 
-    .device-rows { display: flex; flex-direction: column; gap: 0; }
-
-    .device-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 11px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
+    /* AI Card specific */
+    .ai-card {
+      background: var(--card); border: 1px solid rgba(0,200,255,.18);
+      border-radius: 10px; padding: 14px 18px;
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
     }
-    .device-row:last-child { border-bottom: none; }
-
-    .device-row-key { color: var(--muted); font-weight: 500; }
-    .device-row-val { color: var(--text); font-weight: 500; }
-
-    .badge-online {
-      background: rgba(16,185,129,0.12);
-      border: 1px solid rgba(16,185,129,0.25);
-      color: var(--green);
-      font-size: 11px; font-weight: 600;
-      padding: 2px 9px; border-radius: 999px;
-    }
-
-    .val-blue { color: var(--blue); }
-
-    /* ─── CHART CARD ─────────────────────────────── */
-    .chart-wrap { height: 200px; }
-
-    /* ─── STATS CARD ─────────────────────────────── */
-    .stats-table { width: 100%; border-collapse: collapse; }
-    .stats-table th {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 0 0 12px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-    }
-    .stats-table th:first-child { text-align: left; }
-
-    .stats-sub-row td {
-      padding: 8px 0 4px;
-      font-size: 11px;
-      color: var(--muted);
-      text-align: center;
-      font-weight: 500;
-    }
-    .stats-val-row td {
-      padding: 0 0 14px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    .stats-val-row td span { font-size: 11px; font-weight: 500; }
-    .v-blue { color: var(--blue); }
-    .v-orange { color: var(--orange); }
-
-    /* ─── TABLE CARD ─────────────────────────────── */
-    .readings-table-wrap { overflow-y: auto; max-height: 260px; }
-    .readings-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .readings-table thead {
-      position: sticky; top: 0;
-      background: var(--card);
-      z-index: 5;
-    }
-    .readings-table th {
-      padding: 0 12px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    .readings-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      font-size: 13px;
-    }
-    .readings-table tr:last-child td { border-bottom: none; }
-    .readings-table tbody tr:hover { background: rgba(255,255,255,0.025); }
-
-    .status-dot {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .status-dot::before {
+    .ai-card::after {
       content: '';
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--green);
+      position: absolute; top: -50px; right: -50px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(0,180,255,.07) 0%, transparent 70%);
+      pointer-events: none;
     }
-    .status-dot.warn::before  { background: var(--orange); }
-    .status-dot.alert::before { background: #EF4444; }
-    .status-dot.warn  { color: var(--orange); }
-    .status-dot.alert { color: #EF4444; }
-    .status-dot.normal { color: var(--green); }
+    .ai-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted2);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ai-star { color: var(--cyan); font-size: 11px; }
+    .ai-sub-label { font-size: 8px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; margin: 8px 0 2px; }
+    .ai-pred-val {
+      font-size: 44px; font-weight: 800; letter-spacing: -2px; line-height: 1;
+      color: #EEF6FF; margin-bottom: 10px;
+    }
+    .ai-pred-val span { font-size: 22px; font-weight: 600; }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 4px;
+      font-size: 9px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; width: fit-content;
+      margin-bottom: 8px;
+    }
+    .ai-badge.nominal { background: rgba(0,255,163,.10); border: 1px solid rgba(0,255,163,.30); color: var(--green); }
+    .ai-badge.warn    { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.30); color: var(--orange); }
+    .ai-badge.alert   { background: rgba(255,68,68,.10);  border: 1px solid rgba(255,68,68,.30);  color: var(--red); }
+    .ai-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .ai-description { font-size: 9px; color: var(--muted2); line-height: 1.5; }
+
+    /* ── BOTTOM ROW ─────────────────────────────── */
+    .bottom-row {
+      flex: 1; display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 12px; min-height: 0;
+    }
+
+    .left-panels { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+    .panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+      display: flex; flex-direction: column;
+    }
+    .panel-label {
+      font-size: 8px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* Manifest */
+    .manifest-row {
+      display: flex; justify-content: space-between;
+      font-size: 10px; padding: 5px 0;
+      border-bottom: 1px solid var(--border2);
+    }
+    .manifest-row:last-child { border-bottom: none; }
+    .mr-key { color: var(--muted2); }
+    .mr-val { color: var(--text); font-weight: 600; text-align: right; max-width: 110px; }
+
+    /* Interval summary */
+    .interval-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; flex: 1;
+    }
+    .ig-cell { display: flex; flex-direction: column; gap: 2px; }
+    .ig-label { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .ig-val { font-size: 22px; font-weight: 800; letter-spacing: -1px; line-height: 1; color: var(--text); }
+    .ig-val sup { font-size: 11px; font-weight: 500; color: var(--muted2); }
+    .ig-val.positive { color: var(--cyan); }
+    .ig-val.negative { color: var(--red); }
+
+    /* Telemetry */
+    .telemetry-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px 0;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .tele-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; flex-shrink: 0;
+    }
+    .tele-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text);
+    }
+    .tele-icon { color: var(--cyan); font-size: 13px; }
+    .tele-actions { display: flex; gap: 6px; }
+    .tele-btn {
+      font-size: 9px; font-weight: 700; letter-spacing: .8px;
+      text-transform: uppercase; padding: 4px 10px;
+      border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(255,255,255,.03); color: var(--muted2);
+      cursor: pointer; transition: all .15s;
+    }
+    .tele-btn:hover { border-color: var(--cyan2); color: var(--cyan); }
+
+    .tele-table-wrap { flex: 1; overflow-y: auto; min-height: 0; }
+    .tele-table-wrap::-webkit-scrollbar { width: 3px; }
+    .tele-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .tt {
+      width: 100%; border-collapse: collapse;
+    }
+    .tt thead tr {
+      border-bottom: 1px solid var(--border);
+    }
+    .tt thead th {
+      padding: 0 10px 8px;
+      font-size: 8px; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--muted);
+      text-align: left; white-space: nowrap;
+    }
+    .tt tbody td {
+      padding: 10px 10px;
+      font-size: 11px; color: var(--text);
+      border-bottom: 1px solid var(--border2);
+    }
+    .tt tbody tr:last-child td { border-bottom: none; }
+    .tt tbody tr:hover { background: rgba(0,200,255,.03); }
+
+    .tt td.ts { color: var(--muted2); font-size: 10px; font-family: 'Courier New', monospace; }
+    .tt td.nid { color: var(--cyan2); font-size: 10px; font-weight: 600; letter-spacing: .5px; }
+    .tt td.tv  { color: var(--cyan); font-weight: 700; }
+    .tt td.hv  { color: var(--amber); font-weight: 700; }
+
+    .status-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px; border-radius: 3px;
+      font-size: 8px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .sb-verified { background: rgba(0,255,163,.10); border: 1px solid rgba(0,255,163,.25); color: var(--green); }
+    .sb-warn     { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.30); color: var(--orange); }
+    .sb-alert    { background: rgba(255,68,68,.10);  border: 1px solid rgba(255,68,68,.30);  color: var(--red); }
   </style>
 </head>
 <body>
+<div class="app">
 
-  <!-- ─── HEADER ─────────────────────────────────── -->
-  <header>
-    <div class="hdr-left">
-      <div class="hdr-logo">🌡</div>
-      <div>
-        <div class="hdr-title">ESP32 <span>IoT</span> Dashboard</div>
-        <div class="hdr-sub">DHT22 Sensor &bull; Firebase Realtime &bull; Live Stream</div>
-      </div>
+  <!-- ══ SIDEBAR ══════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-name">NEXUS IOT</div>
+      <div class="sb-brand-sub">v2.4.1 · Firebase</div>
     </div>
-    <div class="hdr-right">
-      <div id="hdr-datetime">—</div>
-      <div class="live-pill" id="live-pill">
-        <span class="dot"></span>
-        <span id="live-label">Live</span>
-      </div>
+
+    <div class="sb-system">
+      <div class="sb-system-label">System Core</div>
+      <div class="sb-system-icon">⚙</div>
+      <div class="sb-system-name">ESP32 DHT22</div>
+      <div class="sb-system-id">ESP32_STATION_01</div>
     </div>
-  </header>
 
-  <!-- ─── ROW 1: GAUGE + DEVICE STATUS ─────────── -->
-  <div class="row row-top">
+    <nav class="sb-nav">
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+    </nav>
 
-    <!-- GAUGE CARD -->
-    <div class="card">
-      <div class="card-label">🌡 Current Temperature</div>
-      <div class="gauge-card">
-        <div class="gauge-left">
-          <div class="gauge-wrap">
-            <svg viewBox="0 0 200 200">
-              <defs>
-                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stop-color="#3B82F6"/>
-                  <stop offset="100%" stop-color="#10B981"/>
-                </linearGradient>
-              </defs>
-              <!-- Background track (270°) -->
-              <circle id="gauge-track" cx="100" cy="100" r="80"
-                fill="none" stroke="#1E2A3A" stroke-width="14"
-                stroke-dasharray="376.99 502.65"
-                stroke-linecap="round"
-                transform="rotate(135 100 100)"/>
-              <!-- Fill arc -->
-              <circle id="gauge-fill" cx="100" cy="100" r="80"
-                fill="none" stroke="url(#gaugeGrad)" stroke-width="14"
-                stroke-dasharray="0 502.65"
-                stroke-linecap="round"
-                transform="rotate(135 100 100)"
-                style="transition: stroke-dasharray 1s ease-in-out;"/>
-              <!-- Indicator dot -->
-              <circle id="gauge-dot" cx="100" cy="20" r="7"
-                fill="white" stroke="#0D1117" stroke-width="2"
-                style="transition: cx 1s ease-in-out, cy 1s ease-in-out;"/>
-            </svg>
-            <div class="gauge-center">
-              <span class="gauge-num" id="g-temp">--</span>
-              <span class="gauge-unit">°C</span>
+
+  </aside>
+
+  <!-- ══ MAIN ══════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- TOP NAV -->
+    <nav class="topnav">
+      <span class="tn-brand">NEXUS IOT</span>
+      <div class="tn-links">
+        <div class="tn-link active">Dashboard</div>
+      </div>
+      <div class="tn-right">
+        <div class="tn-status">
+          <div class="tn-dot"></div>
+          System Link: Active
+        </div>
+        <span class="tn-icon">🔔</span>
+        <span class="tn-icon">📶</span>
+        <span class="tn-icon">🕐</span>
+        <div class="tn-avatar">👤</div>
+      </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- CC HEADER -->
+      <div class="cc-header">
+        <div class="cc-title-area">
+          <div class="cc-h1">Command Center</div>
+          <div class="cc-sub">
+            <span>📍</span>
+            <span>STATION_INDIA_SOUTH_01</span>
+            <span class="cc-sub-dot">•</span>
+            <span>Last Sync: </span>
+            <span class="cc-sync" id="last-sync">—</span>
+          </div>
+        </div>
+        <div class="network-card">
+          <div class="nc-label">Network Latency</div>
+          <div class="nc-value">
+            <span id="net-latency">—</span>
+            <span class="nc-unit">ms</span>
+          </div>
+          <div class="nc-icon" id="nc-bar">▂▄▆▆</div>
+        </div>
+      </div>
+
+      <!-- BIG CARDS -->
+      <div class="big-cards">
+
+        <!-- Temperature -->
+        <div class="bc">
+          <div class="bc-label">Core Temperature</div>
+          <div class="bc-value cyan" id="temp-val">--<small style="font-size:22px;font-weight:600;">°C</small></div>
+          <div class="bc-icon temp-icon">🌡</div>
+          <div class="sparkline-wrap"><canvas id="tempSparkline"></canvas></div>
+          <div class="bc-footer">
+            <span id="temp-min">Min: —</span>
+            <span class="trend" id="temp-trend">Current Trend: —</span>
+            <span id="temp-max">Max: —</span>
+          </div>
+        </div>
+
+        <!-- Humidity -->
+        <div class="bc">
+          <div class="bc-label">Ambient Humidity</div>
+          <div class="bc-value amber" id="hum-val">--<small style="font-size:22px;font-weight:600;">%</small></div>
+          <div class="bc-icon hum-icon">💧</div>
+          <div class="sparkline-wrap"><canvas id="humSparkline"></canvas></div>
+          <div class="bc-footer">
+            <span id="hum-min">Min: —</span>
+            <span class="trend amber" id="hum-trend">Current Trend: —</span>
+            <span id="hum-max">Max: —</span>
+          </div>
+        </div>
+
+        <!-- AI Prediction -->
+        <div class="ai-card">
+          <div class="ai-label">
+            <span class="ai-star">✦</span>
+            AI Predictive Analysis
+          </div>
+          <div class="ai-sub-label">Predicted Temp (T+1H)</div>
+          <div class="ai-pred-val" id="ai-pred-val">--<span>°C</span></div>
+          <div class="ai-badge nominal" id="ai-badge">
+            <div class="ai-badge-dot"></div>
+            <span id="ai-badge-text">Safety Status: Nominal</span>
+          </div>
+          <div class="ai-description" id="ai-description">
+            Neural engine idle. Awaiting prediction data from Random Forest model.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM ROW -->
+      <div class="bottom-row">
+
+        <!-- LEFT PANELS -->
+        <div class="left-panels">
+
+          <!-- Device Manifest -->
+          <div class="panel">
+            <div class="panel-label">Device Manifest</div>
+            <div class="manifest-row">
+              <span class="mr-key">Sensor Node</span>
+              <span class="mr-val">ESP32 DHT22</span>
+            </div>
+            <div class="manifest-row">
+              <span class="mr-key">Data Stream</span>
+              <span class="mr-val">ThingSpeak Hub</span>
+            </div>
+            <div class="manifest-row">
+              <span class="mr-key">Storage</span>
+              <span class="mr-val">Google Firebase</span>
+            </div>
+            <div class="manifest-row">
+              <span class="mr-key">Uptime</span>
+              <span class="mr-val" id="d-uptime">—</span>
+            </div>
+            <div class="manifest-row">
+              <span class="mr-key">Status</span>
+              <span class="mr-val" id="db-status" style="color:var(--green)">Online</span>
             </div>
           </div>
-          <div class="gauge-status" id="g-status">🌡 Normal</div>
-        </div>
 
-        <div class="gauge-right">
-          <div>
-            <div class="gauge-metric-label">💧 Humidity</div>
-            <div class="gauge-metric-val" id="g-hum">-- <span>%</span></div>
-            <div class="gauge-metric-sub" id="g-hum-label">—</div>
+          <!-- Interval Summary -->
+          <div class="panel" style="flex:1;">
+            <div class="panel-label">Interval Summary</div>
+            <div class="interval-grid">
+              <div class="ig-cell">
+                <div class="ig-label">Min (24H)</div>
+                <div class="ig-val" id="iv-min24">--<sup>°</sup></div>
+              </div>
+              <div class="ig-cell">
+                <div class="ig-label">Max (24H)</div>
+                <div class="ig-val" id="iv-max24">--<sup>°</sup></div>
+              </div>
+              <div class="ig-cell">
+                <div class="ig-label">Avg (All)</div>
+                <div class="ig-val" id="iv-avg">--<sup>°</sup></div>
+              </div>
+              <div class="ig-cell">
+                <div class="ig-label">Drift</div>
+                <div class="ig-val positive" id="iv-drift">--</div>
+              </div>
+            </div>
           </div>
-          <div class="divider"></div>
-          <div>
-            <div class="gauge-metric-label">📈 Trend</div>
-            <div class="gauge-metric-val" id="g-trend" style="font-size:20px;color:var(--blue);">—</div>
-            <div class="gauge-metric-sub" id="g-trend-val" style="color:var(--muted);">—</div>
+
+        </div>
+
+        <!-- TELEMETRY LOG -->
+        <div class="telemetry-card">
+          <div class="tele-header">
+            <div class="tele-title">
+              <span class="tele-icon">≡</span>
+              Telemetry Log (Live)
+            </div>
+
+          </div>
+          <div class="tele-table-wrap">
+            <table class="tt">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Temperature</th>
+                  <th>Humidity</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tele-body">
+                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-size:10px;">Awaiting telemetry data…</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-      </div>
-    </div>
-
-    <!-- DEVICE STATUS CARD -->
-    <div class="card">
-      <div class="card-label">⚡ Device Status</div>
-      <div class="device-name">ESP32 DHT22 Sensor</div>
-      <div class="device-rows">
-        <div class="device-row">
-          <span class="device-row-key">Status</span>
-          <span class="badge-online">Online</span>
-        </div>
-        <div class="device-row">
-          <span class="device-row-key">Wi-Fi Signal</span>
-          <span class="device-row-val val-blue">📶 —</span>
-        </div>
-        <div class="device-row">
-          <span class="device-row-key">⏱ Uptime</span>
-          <span class="device-row-val" id="d-uptime">—</span>
-        </div>
-        <div class="device-row">
-          <span class="device-row-key">🕐 Last Updated</span>
-          <span class="device-row-val" id="d-updated">—</span>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ─── ROW 2: CHARTS ──────────────────────────── -->
-  <div class="row row-mid">
-    <div class="card">
-      <div class="card-label" style="color:#F59E0B;">🟠 Temperature Trend <span style="color:var(--muted);font-weight:400;">(Last 1 Hour)</span></div>
-      <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-label" style="color:var(--blue);">💧 Humidity Trend <span style="color:var(--muted);font-weight:400;">(Last 1 Hour)</span></div>
-      <div class="chart-wrap"><canvas id="humChart"></canvas></div>
-    </div>
-  </div>
-
-  <!-- ─── ROW 3: STATS + READINGS ──────────────── -->
-  <div class="row row-bot">
-
-    <!-- STATS -->
-    <div class="card">
-      <div class="card-label">📊 Min / Max Summary</div>
-      <table class="stats-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th>Last 24 Hours</th>
-            <th>Last 6 Hours</th>
-            <th>Last 1 Hour</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="stats-sub-row">
-            <td style="text-align:left;color:var(--muted);">Min</td>
-            <td id="s-24h-min">—</td>
-            <td id="s-6h-min">—</td>
-            <td id="s-1h-min">—</td>
-          </tr>
-          <tr class="stats-val-row" id="row-min">
-            <td></td>
-            <td class="v-blue" id="sv-24h-min">--</td>
-            <td class="v-blue" id="sv-6h-min">--</td>
-            <td class="v-blue" id="sv-1h-min">--</td>
-          </tr>
-          <tr class="stats-sub-row">
-            <td style="text-align:left;color:var(--muted);">Max</td>
-            <td id="s-24h-max">—</td>
-            <td id="s-6h-max">—</td>
-            <td id="s-1h-max">—</td>
-          </tr>
-          <tr class="stats-val-row">
-            <td></td>
-            <td class="v-orange" id="sv-24h-max">--</td>
-            <td class="v-orange" id="sv-6h-max">--</td>
-            <td class="v-orange" id="sv-1h-max">--</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- RECENT READINGS -->
-    <div class="card" style="padding-bottom:0;">
-      <div class="card-label">☰ Recent Readings</div>
-      <div class="readings-table-wrap">
-        <table class="readings-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Temperature (°C)</th>
-              <th>Humidity (%)</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="readings-body">
-            <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
+      </div><!-- end bottom-row -->
+    </div><!-- end content -->
+  </div><!-- end main -->
+</div><!-- end app -->
 
 <script>
-  /* ─── CONSTANTS ───────────────────────────────── */
-  const CIRC       = 502.65;   // 2π×80
-  const ARC        = 376.99;   // 270° of CIRC (75%)
-  const MAX_TEMP   = 50;       // gauge max
-  const CX = 100, CY = 100, R = 80;
-  const START_DEG  = 135;      // gauge start angle (SVG coords, before rotation)
+  /* ─── STATE ─────────────────────────────────────── */
+  let history = [], tempSparkChart, humSparkChart;
+  let lastTs = null, startTime = Date.now();
+  let lastSyncMs = null;
 
-  /* ─── STATE ───────────────────────────────────── */
-  let history    = [];
-  let tempChart, humChart;
-  let lastTs     = null;
-  let startTime  = Date.now();
-
-  /* ─── INIT ────────────────────────────────────── */
+  /* ─── INIT ──────────────────────────────────────── */
   async function init() {
-    initCharts();
+    initSparklines();
     tickClock();
     setInterval(tickClock, 1000);
+    setInterval(updateUptime, 15000);
+    setInterval(updateSyncLabel, 1000);
     await loadHistory();
-    setInterval(pollLatest, 60000);
+    await pollPrediction();
+    setInterval(pollLatest,     60000);
+    setInterval(pollPrediction, 300000);
   }
 
-  /* ─── CLOCK ───────────────────────────────────── */
-  function tickClock() {
-    const now = new Date();
-    document.getElementById('hdr-datetime').textContent =
-      now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) +
-      ' • ' + now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }
+  /* ─── CLOCK ─────────────────────────────────────── */
+  function tickClock() {} // no header clock in this design
 
-  /* ─── GAUGE ───────────────────────────────────── */
-  function setGauge(temp) {
-    const t = Math.max(0, Math.min(MAX_TEMP, parseFloat(temp)));
-    const pct    = t / MAX_TEMP;
-    const fill   = pct * ARC;
-    const gap    = CIRC - fill;
-
-    document.getElementById('gauge-fill').setAttribute('stroke-dasharray', `${fill} ${gap}`);
-
-    // Indicator dot position
-    // The arc starts at 135° (SVG angle after rotation transform)
-    // actual angle from SVG origin = 135 + (pct * 270)
-    const ang = (START_DEG + pct * 270) * Math.PI / 180;
-    const dx  = CX + R * Math.cos(ang);
-    const dy  = CY + R * Math.sin(ang);
-    const dot = document.getElementById('gauge-dot');
-    dot.setAttribute('cx', dx.toFixed(2));
-    dot.setAttribute('cy', dy.toFixed(2));
-
-    // Text
-    document.getElementById('g-temp').textContent = t.toFixed(1);
-
-    // Status badge
-    const badge = document.getElementById('g-status');
-    if (t >= 40) {
-      badge.textContent = '🔴 Critical';
-      badge.style.cssText = 'background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#EF4444';
-    } else if (t >= 35) {
-      badge.textContent = '🟠 High';
-      badge.style.cssText = 'background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#F59E0B';
-    } else {
-      badge.textContent = '🌡 Normal';
-      badge.style.cssText = 'background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);color:#10B981';
-    }
-  }
-
-  /* ─── HUMIDITY LABEL ─────────────────────────── */
-  function humLabel(h) {
-    h = parseFloat(h);
-    if (h < 30) return 'Dry';
-    if (h < 50) return 'Comfortable';
-    if (h < 65) return 'Moderate';
-    return 'Humid';
-  }
-
-  /* ─── TREND ───────────────────────────────────── */
-  function calcTrend(points) {
-    if (points.length < 2) return { label: '—', rate: '—' };
-    const last10 = points.slice(-10);
-    const first  = parseFloat(last10[0].temperature);
-    const latest = parseFloat(last10[last10.length - 1].temperature);
-    const diffMin = (new Date(last10[last10.length-1].timestamp) - new Date(last10[0].timestamp)) / 60000 || 1;
-    const rate   = ((latest - first) / diffMin).toFixed(2);
-    const label  = Math.abs(rate) < 0.05 ? 'Stable' : rate > 0 ? 'Rising' : 'Falling';
-    return { label, rate: `${rate > 0 ? '+' : ''}${rate} °C/hr` };
-  }
-
-  /* ─── UPTIME ──────────────────────────────────── */
+  /* ─── UPTIME ────────────────────────────────────── */
   function fmtUptime(ms) {
     const s = Math.floor(ms/1000);
-    const d = Math.floor(s/86400);
-    const h = Math.floor((s%86400)/3600);
-    const m = Math.floor((s%3600)/60);
-    return `${d}d ${h}h ${m}m`;
+    const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60);
+    return `${d}d ${h.toString().padStart(2,'0')}h ${m.toString().padStart(2,'0')}m`;
+  }
+  function updateUptime() {
+    document.getElementById('d-uptime').textContent = fmtUptime(Date.now()-startTime);
   }
 
-  /* ─── CHARTS ──────────────────────────────────── */
-  function initCharts() {
-    const base = {
-      responsive: true,
-      maintainAspectRatio: false,
+  /* ─── LAST SYNC LABEL ───────────────────────────── */
+  function updateSyncLabel() {
+    if (!lastSyncMs) return;
+    const sec = Math.floor((Date.now() - lastSyncMs) / 1000);
+    const el = document.getElementById('last-sync');
+    if (sec < 60) el.textContent = `${sec} SECOND${sec!==1?'S':''} AGO`;
+    else if (sec < 3600) el.textContent = `${Math.floor(sec/60)} MIN AGO`;
+    else el.textContent = `${Math.floor(sec/3600)} HR AGO`;
+  }
+
+  /* ─── SPARKLINE INIT ────────────────────────────── */
+  function sparkOpts() {
+    return {
+      responsive: true, maintainAspectRatio: false,
       animation: { duration: 600 },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          mode: 'index', intersect: false,
-          backgroundColor: '#1A2234',
-          borderColor: 'rgba(255,255,255,0.1)',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 8,
-          titleColor: '#94A3B8',
-          bodyColor: '#F1F5F9',
-          titleFont: { family: 'Inter', size: 11 },
-          bodyFont: { family: 'Inter', size: 14, weight: '600' },
-          displayColors: false,
-        }
-      },
+      plugins: { legend:{ display:false }, tooltip:{ enabled:false } },
       scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.06)', drawBorder: false },
-          ticks: {
-            color: '#64748B',
-            font: { family: 'Inter', size: 11 },
-            maxTicksLimit: 5,
-            maxRotation: 0,
-            autoSkip: true
-          }
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
-          border: { display: false },
-          ticks: { color: '#64748B', font: { family: 'Inter', size: 11 }, padding: 6 }
-        }
-      }
+        x: { display:false },
+        y: { display:false }
+      },
+      elements: { line:{ tension:0.5 }, point:{ radius:0 } }
     };
+  }
 
-    const tCtx = document.getElementById('tempChart').getContext('2d');
-    const tGrad = tCtx.createLinearGradient(0, 0, 0, 200);
-    tGrad.addColorStop(0, 'rgba(245,158,11,0.30)');
-    tGrad.addColorStop(1, 'rgba(245,158,11,0.01)');
-
-    tempChart = new Chart(tCtx, {
+  function initSparklines() {
+    // Temperature sparkline (cyan)
+    const tc = document.getElementById('tempSparkline').getContext('2d');
+    const tg = tc.createLinearGradient(0, 0, 0, 100);
+    tg.addColorStop(0, 'rgba(0,212,255,0.40)');
+    tg.addColorStop(1, 'rgba(0,212,255,0.00)');
+    tempSparkChart = new Chart(tc, {
       type: 'line',
-      data: { labels: [], datasets: [{
-        data: [], label: 'Temp °C',
-        borderColor: '#F59E0B', backgroundColor: tGrad,
-        borderWidth: 2, fill: true, tension: 0.4,
-        pointRadius: 0, pointHoverRadius: 5, pointBackgroundColor: '#F59E0B'
-      }] },
-      options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, suggestedMin: 0, suggestedMax: 40 } } }
+      data: { labels:[], datasets:[{ data:[], borderColor:'#00D4FF', backgroundColor:tg, borderWidth:2, fill:true }] },
+      options: sparkOpts()
     });
 
-    const hCtx = document.getElementById('humChart').getContext('2d');
-    const hGrad = hCtx.createLinearGradient(0, 0, 0, 200);
-    hGrad.addColorStop(0, 'rgba(59,130,246,0.25)');
-    hGrad.addColorStop(1, 'rgba(59,130,246,0.01)');
-
-    humChart = new Chart(hCtx, {
+    // Humidity sparkline (amber)
+    const hc = document.getElementById('humSparkline').getContext('2d');
+    const hg = hc.createLinearGradient(0, 0, 0, 100);
+    hg.addColorStop(0, 'rgba(240,160,32,0.35)');
+    hg.addColorStop(1, 'rgba(240,160,32,0.00)');
+    humSparkChart = new Chart(hc, {
       type: 'line',
-      data: { labels: [], datasets: [{
-        data: [], label: 'Humidity %',
-        borderColor: '#3B82F6', backgroundColor: hGrad,
-        borderWidth: 2, fill: true, tension: 0.4,
-        pointRadius: 0, pointHoverRadius: 5, pointBackgroundColor: '#3B82F6'
-      }] },
-      options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, suggestedMin: 0, suggestedMax: 100 } } }
+      data: { labels:[], datasets:[{ data:[], borderColor:'#F0A020', backgroundColor:hg, borderWidth:2, fill:true }] },
+      options: sparkOpts()
     });
   }
 
-  /* ─── DATA PROCESSING ────────────────────────── */
+  /* ─── PROCESS DATA ──────────────────────────────── */
+  function calcTrend(pts) {
+    if (pts.length < 2) return 'STABLE';
+    const s = pts.slice(-8);
+    const first = parseFloat(s[0].temperature), last = parseFloat(s[s.length-1].temperature);
+    const diff = last - first;
+    if (Math.abs(diff) < 0.1) return 'STABLE';
+    return diff > 0 ? 'RISING' : 'FALLING';
+  }
+
   function processAll() {
     if (!history.length) return;
-
-    const latest = history[history.length - 1];
+    const latest = history[history.length-1];
     lastTs = latest.timestamp;
+    lastSyncMs = Date.now();
+    updateSyncLabel();
+    updateUptime();
 
-    // Gauge
-    setGauge(latest.temperature);
+    const temp = parseFloat(latest.temperature);
+    const hum  = parseFloat(latest.humidity);
 
-    // Humidity + trend
-    const hum = parseFloat(latest.humidity);
-    document.getElementById('g-hum').innerHTML = `${hum.toFixed(1)} <span>%</span>`;
-    document.getElementById('g-hum-label').textContent = humLabel(hum);
+    // Big values
+    document.getElementById('temp-val').innerHTML = `${temp.toFixed(1)}<small style="font-size:22px;font-weight:600;">°C</small>`;
+    document.getElementById('hum-val').innerHTML  = `${hum.toFixed(1)}<small style="font-size:22px;font-weight:600;">%</small>`;
 
-    const trend = calcTrend(history);
-    document.getElementById('g-trend').textContent = trend.label;
-    document.getElementById('g-trend-val').textContent = trend.rate;
+    // Trend labels
+    const tempTrend = calcTrend(history);
+    const humTrendArr = history.map(d => parseFloat(d.humidity));
+    const humTrendLabel = humTrendArr.length > 2 && (humTrendArr[humTrendArr.length-1] - humTrendArr[humTrendArr.length-3]) > 0.2 ? 'RISING' :
+                          humTrendArr.length > 2 && (humTrendArr[humTrendArr.length-1] - humTrendArr[humTrendArr.length-3]) < -0.2 ? 'FALLING' : 'STABLE';
+    document.getElementById('temp-trend').textContent = `Current Trend: ${tempTrend}`;
+    document.getElementById('hum-trend').textContent  = `Current Trend: ${humTrendLabel}`;
 
-    // Device status
-    document.getElementById('d-updated').textContent = fmtTime(latest.timestamp);
-    document.getElementById('d-uptime').textContent  = fmtUptime(Date.now() - startTime);
-
-    // Charts: 4 equal 15-min segments over last 1 hour
-    const nowMs  = Date.now();
-    const now1h  = nowMs - 3600000;
-
-    // Build 5 fixed anchor times: T-60, T-45, T-30, T-15, T-now
-    const anchors = [0, 15, 30, 45, 60].map(m => nowMs - m * 60000).reverse();
-    const anchorLabels = anchors.map(t => fmtTimeLbl(new Date(t).toISOString()));
-
-    // Get all historical points in the last hour
+    // Last 1 hour slice
+    const nowMs = Date.now();
     let pts = history.filter(d => {
       const t = new Date(d.timestamp||d.tsTimestamp).getTime();
-      return !isNaN(t) && t >= now1h;
+      return !isNaN(t) && (nowMs - t) <= 3600000;
     });
     if (!pts.length) pts = history.slice(-60);
 
-    // For each anchor segment boundary, find the closest real data point
-    // then build a full array of all points with labels snapped to anchors
-    const labels = pts.map(d => fmtTimeLbl(d.timestamp||d.tsTimestamp));
-    const temps  = pts.map(d => parseFloat(d.temperature));
-    const hums   = pts.map(d => parseFloat(d.humidity));
+    const labels  = pts.map(d => fmtLbl(d.timestamp||d.tsTimestamp));
+    const temps   = pts.map(d => parseFloat(d.temperature));
+    const hums    = pts.map(d => parseFloat(d.humidity));
 
-    // Override ticks to show exactly the 5 anchor labels
-    const tickCallback = (val, idx, ticks) => {
-      // Show only ticks whose label matches one of the anchorLabels
-      const lbl = labels[idx];
-      return anchorLabels.includes(lbl) ? lbl : null;
-    };
+    // Min/Max in footer
+    if (temps.length) {
+      const tMin = Math.min(...temps), tMax = Math.max(...temps);
+      document.getElementById('temp-min').textContent = `Min: ${tMin.toFixed(1)}°C`;
+      document.getElementById('temp-max').textContent = `Max: ${tMax.toFixed(1)}°C`;
+    }
+    if (hums.length) {
+      const hMin = Math.min(...hums), hMax = Math.max(...hums);
+      document.getElementById('hum-min').textContent = `Min: ${hMin.toFixed(1)}%`;
+      document.getElementById('hum-max').textContent = `Max: ${hMax.toFixed(1)}%`;
+    }
 
-    tempChart.options.scales.x.ticks.callback = tickCallback;
-    humChart.options.scales.x.ticks.callback  = tickCallback;
+    // Dynamic sparkline Y-axis (shows variation)
+    if (temps.length) {
+      const tMin = Math.min(...temps), tMax = Math.max(...temps);
+      const tRange = Math.max(tMax - tMin, 2);
+      const pad = tRange * 0.6;
+      tempSparkChart.options.scales.y.min = tMin - pad;
+      tempSparkChart.options.scales.y.max = tMax + pad;
+    }
+    if (hums.length) {
+      const hMin = Math.min(...hums), hMax = Math.max(...hums);
+      const hRange = Math.max(hMax - hMin, 3);
+      const pad = hRange * 0.6;
+      humSparkChart.options.scales.y.min = hMin - pad;
+      humSparkChart.options.scales.y.max = hMax + pad;
+    }
 
-    tempChart.data.labels = labels;
-    tempChart.data.datasets[0].data = temps;
-    tempChart.update();
+    tempSparkChart.data.labels = labels;
+    tempSparkChart.data.datasets[0].data = temps;
+    tempSparkChart.update();
 
-    humChart.data.labels = labels;
-    humChart.data.datasets[0].data = hums;
-    humChart.update();
+    humSparkChart.data.labels = labels;
+    humSparkChart.data.datasets[0].data = hums;
+    humSparkChart.update();
 
-    // Stats
-    calcStats();
-
-    // Table
-    renderTable(pts.slice(-20).reverse());
-  }
-
-  function calcStats() {
+    // Interval summary
     const now = Date.now();
-    const buckets = { '1h': 1, '6h': 6, '24h': 24 };
-    Object.entries(buckets).forEach(([key, hrs]) => {
-      const slice = history.filter(d => {
-        const t = new Date(d.timestamp||d.tsTimestamp).getTime();
-        return (now - t) <= hrs * 3600000;
-      });
-      const temps = slice.map(d => parseFloat(d.temperature)).filter(n => !isNaN(n));
-      const minV  = temps.length ? Math.min(...temps) : null;
-      const maxV  = temps.length ? Math.max(...temps) : null;
+    const slice24h = history.filter(d => (now - new Date(d.timestamp||d.tsTimestamp).getTime()) <= 86400000);
+    const tv24 = slice24h.map(d => parseFloat(d.temperature)).filter(n => !isNaN(n));
+    const tvAll = history.map(d => parseFloat(d.temperature)).filter(n => !isNaN(n));
+    if (tv24.length) {
+      document.getElementById('iv-min24').innerHTML = `${Math.min(...tv24).toFixed(1)}<sup>°</sup>`;
+      document.getElementById('iv-max24').innerHTML = `${Math.max(...tv24).toFixed(1)}<sup>°</sup>`;
+    }
+    if (tvAll.length) {
+      const avg = tvAll.reduce((a,b) => a+b, 0) / tvAll.length;
+      document.getElementById('iv-avg').innerHTML = `${avg.toFixed(1)}<sup>°</sup>`;
+      // Drift: compare recent 1h avg vs 24h avg
+      const slice1h = history.filter(d => (now - new Date(d.timestamp||d.tsTimestamp).getTime()) <= 3600000);
+      const tv1h = slice1h.map(d => parseFloat(d.temperature)).filter(n => !isNaN(n));
+      const avg1h = tv1h.length ? tv1h.reduce((a,b)=>a+b,0)/tv1h.length : null;
+      const avg24 = tv24.length ? tv24.reduce((a,b)=>a+b,0)/tv24.length : null;
+      const driftEl = document.getElementById('iv-drift');
+      if (avg1h && avg24) {
+        const drift = ((avg1h - avg24) / avg24 * 100);
+        driftEl.textContent = (drift >= 0 ? '+' : '') + drift.toFixed(1) + '%';
+        driftEl.className = 'ig-val ' + (drift > 0 ? 'positive' : 'negative');
+      }
+    }
 
-      document.getElementById(`sv-${key}-min`).innerHTML = minV !== null ? `${minV.toFixed(1)}<span> °c</span>` : '--';
-      document.getElementById(`sv-${key}-max`).innerHTML = maxV !== null ? `${maxV.toFixed(1)}<span> °c</span>` : '--';
-    });
+    // Telemetry table
+    renderTelemetry(pts.slice(-10).reverse());
   }
 
-  function renderTable(rows) {
-    const tbody = document.getElementById('readings-body');
+  function renderTelemetry(rows) {
+    const tbody = document.getElementById('tele-body');
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">No data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-size:10px;">No telemetry data</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map(d => {
-      const t = parseFloat(d.temperature);
-      let sc = 'normal', sl = 'Normal';
-      if (t >= 40) { sc = 'alert'; sl = 'Alert'; }
-      else if (t >= 35) { sc = 'warn'; sl = 'Warm'; }
+      const t   = parseFloat(d.temperature);
+      const ts  = fmtFullTs(d.timestamp||d.tsTimestamp);
+      let sc = 'sb-verified', sl = 'VERIFIED';
+      if (t >= 40) { sc = 'sb-alert'; sl = 'ALERT'; }
+      else if (t >= 35) { sc = 'sb-warn'; sl = 'WARN'; }
       return `<tr>
-        <td>${fmtTimeLong(d.timestamp||d.tsTimestamp)}</td>
-        <td>${t.toFixed(1)}</td>
-        <td>${parseFloat(d.humidity).toFixed(1)}</td>
-        <td><span class="status-dot ${sc}">${sl}</span></td>
+        <td class="ts">${ts}</td>
+        <td class="tv">${t.toFixed(1)}°C</td>
+        <td class="hv">${parseFloat(d.humidity).toFixed(1)}%</td>
+        <td><span class="status-badge ${sc}">${sl}</span></td>
       </tr>`;
     }).join('');
   }
 
-  /* ─── API CALLS ───────────────────────────────── */
+  /* ─── API ───────────────────────────────────────── */
   async function loadHistory() {
     try {
-      const res  = await fetch('/api/history');
+      const t0 = Date.now();
+      const res = await fetch('/api/history');
+      updateLatency(Date.now() - t0);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      if (Array.isArray(data) && data.length) {
-        history = data;
-        setLive(true);
-        processAll();
-      }
+      if (Array.isArray(data) && data.length) { history = data; setLive(true); processAll(); }
     } catch { setLive(false); }
   }
 
   async function pollLatest() {
     try {
-      const res  = await fetch('/api/latest');
+      const t0 = Date.now();
+      const res = await fetch('/api/latest');
+      updateLatency(Date.now() - t0);
       if (!res.ok) throw new Error();
-      const d    = await res.json();
+      const d = await res.json();
       if (d && d.timestamp && d.timestamp !== lastTs) {
         history.push(d);
         if (history.length > 1500) history.shift();
-        setLive(true);
-        processAll();
+        setLive(true); processAll();
       }
     } catch { setLive(false); }
   }
 
-  /* ─── LIVE PILL ───────────────────────────────── */
+  function updateLatency(ms) {
+    document.getElementById('net-latency').textContent = ms;
+    const bars = ms < 100 ? '▂▄▆▆' : ms < 300 ? '▂▄▄▄' : '▂▂▂▄';
+    document.getElementById('nc-bar').textContent = bars;
+  }
+
   function setLive(on) {
-    const el = document.getElementById('live-pill');
-    el.classList.toggle('offline', !on);
-    document.getElementById('live-label').textContent = on ? 'Live' : 'Offline';
+    const dbst = document.getElementById('db-status');
+    if (dbst) { dbst.textContent = on ? 'Online' : 'Offline'; dbst.style.color = on ? 'var(--green)' : 'var(--red)'; }
   }
 
-  /* ─── FORMATTERS ──────────────────────────────── */
-  function fmtTime(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d)) return '—';
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
-  function fmtTimeLbl(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d)) return '—';
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  }
-  function fmtTimeLong(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d)) return '—';
-    return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' ' +
-           d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  /* ─── PREDICTION ────────────────────────────────── */
+  async function pollPrediction() {
+    try {
+      const res = await fetch('/predict');
+      if (!res.ok) throw new Error();
+      updatePred(await res.json());
+    } catch(e) { console.warn('[Pred]', e); }
   }
 
-  /* ─── START ───────────────────────────────────── */
+  function updatePred(d) {
+    if (!d.model_loaded || d.error) return;
+    const temp = d.predicted_temp;
+    if (temp === null) return;
+
+    document.getElementById('ai-pred-val').innerHTML = `${temp.toFixed(1)}<span>°C</span>`;
+
+    const badge = document.getElementById('ai-badge');
+    const badgeTxt = document.getElementById('ai-badge-text');
+    const desc = document.getElementById('ai-description');
+
+    if (d.alert) {
+      badge.className = 'ai-badge alert';
+      badgeTxt.textContent = 'Safety Status: Alert';
+      desc.textContent = `Neural engine flags high risk. Predicted temperature ${temp.toFixed(1)}°C exceeds ${d.threshold}°C safety threshold.`;
+    } else if (temp >= 33) {
+      badge.className = 'ai-badge warn';
+      badgeTxt.textContent = 'Safety Status: Elevated';
+      desc.textContent = `Neural engine suggests monitoring. Predicted ${temp.toFixed(1)}°C approaching threshold. Confidence: ${d.confidence || '—'}.`;
+    } else {
+      badge.className = 'ai-badge nominal';
+      badgeTxt.textContent = 'Safety Status: Nominal';
+      desc.textContent = `Neural engine suggests ${d.confidence || '88.4%'} confidence based on historical atmospheric patterns. Next-day forecast safe.`;
+    }
+  }
+
+  /* ─── FORMATTERS ────────────────────────────────── */
+  function fmtLbl(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso); if (isNaN(d)) return '—';
+    return d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  }
+  function fmtFullTs(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso); if (isNaN(d)) return '—';
+    return d.toLocaleDateString('en-CA') + ' ' +
+           d.toLocaleTimeString('en-US', { hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
   window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>

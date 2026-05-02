@@ -1,6 +1,6 @@
 """
 Flask + ThingSpeak to Firebase integrated background worker.
-Enhanced with EMAIL ALERT SYSTEM for temperature monitoring.
+Enhanced with EMAIL ALERT SYSTEM and ML TEMPERATURE PREDICTION.
 """
 
 import time
@@ -11,8 +11,9 @@ from datetime import datetime, timezone, timedelta
 
 # Indian Standard Time (UTC+5:30)
 IST = timezone(timedelta(hours=5, minutes=30))
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, make_response
 from utils.alert_monitor import TemperatureAlertMonitor, get_alert_history
+from utils.predictor import predict_next_day, is_model_ready
 
 app = Flask(__name__)
 
@@ -24,7 +25,7 @@ FIREBASE_DATABASE_URL = "https://realtime-database-71db5-default-rtdb.firebaseio
 DEVICE_ID   = "ESP32-001"
 DEVICE_NAME = "ESP32 DHT22 Sensor"
 LOCATION    = "Main Room"
-POLL_INTERVAL_SECONDS = 60  # ⭐ Changed from 15 to 60 seconds (1 minute)
+POLL_INTERVAL_SECONDS = 60  # Changed from 15 to 60 seconds (1 minute)
 
 def fetch_latest_from_thingspeak() -> dict | None:
     url = f"{THINGSPEAK_BASE_URL}/channels/{THINGSPEAK_CHANNEL_ID}/feeds.json"
@@ -54,7 +55,7 @@ def fetch_latest_from_thingspeak() -> dict | None:
             "ts_timestamp": latest.get("created_at", ""),
         }
     except Exception as e:
-        print(f"❌ ThingSpeak error: {e}")
+        print(f"[ERROR] ThingSpeak error: {e}")
         return None
 
 def push_to_firebase(temperature: float, humidity: float, ts_timestamp: str) -> bool:
@@ -75,19 +76,19 @@ def push_to_firebase(temperature: float, humidity: float, ts_timestamp: str) -> 
     try:
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        print(f"✅ Firebase push OK!")
+        print(f"[OK] Firebase push OK!")
         
         # Keep device status updated
         requests.patch(f"{FIREBASE_DATABASE_URL}/devices/{DEVICE_ID}.json", json={"status": "online"}, timeout=5)
         return True
     except Exception as e:
-        print(f"❌ Firebase error: {e}")
+        print(f"[ERROR] Firebase error: {e}")
         return False
 
 def background_sync_task():
     print("=" * 60)
     print("  ThingSpeak -> Firebase Bridge (Background Thread Restored)")
-    print("  ✨ EMAIL ALERT SYSTEM ENABLED")
+    print("  [*] EMAIL ALERT SYSTEM ENABLED")
     print("=" * 60)
     time.sleep(2)
     last_ts_timestamp = None
@@ -102,10 +103,10 @@ def background_sync_task():
             ts   = reading["ts_timestamp"]
 
             if ts == last_ts_timestamp:
-                print(f"  ⏳ No new data on ThingSpeak since last check ({ts}). Skipping push.")
+                print(f"  [WAIT] No new data on ThingSpeak since last check ({ts}). Skipping push.")
             else:
-                print(f"  🌡  Temperature : {temp} °C | 💧 Humidity    : {hum} %")
-                print(f"  🕒 TS Time     : {ts} (NEW READING!)")
+                print(f"  [TEMP] Temperature : {temp} C | [HUM] Humidity : {hum} %")
+                print(f"  [TIME] TS Time     : {ts} (NEW READING!)")
 
                 if push_to_firebase(temp, hum, ts):
                     last_ts_timestamp = ts
@@ -119,8 +120,8 @@ def background_sync_task():
                         "device_name": DEVICE_NAME
                     }
                     
-                    # ✨ CHECK TEMPERATURE ALERT
-                    print("\n🔍 Checking temperature alert conditions...")
+                    # CHECK TEMPERATURE ALERT
+                    print("\n[CHECK] Checking temperature alert conditions...")
                     alert_result = TemperatureAlertMonitor.check_temperature(
                         temperature=temp,
                         humidity=hum,
@@ -131,17 +132,66 @@ def background_sync_task():
                     # Log alert result
                     print(f"   {alert_result['message']}")
                     if alert_result["alert_sent"]:
-                        print(f"   ✅ EMAIL ALERT SENT: {alert_result['alert_reason']}")
+                        print(f"   [ALERT SENT] EMAIL ALERT SENT: {alert_result['alert_reason']}")
         else:
-            print("  ⚠️  Skipping Firebase push (no valid reading).")
+            print("  [WARN] Skipping Firebase push (no valid reading).")
 
         time.sleep(POLL_INTERVAL_SECONDS)
 
 last_reading = {"temperature": 0, "humidity": 0, "ts_timestamp": "", "device_name": DEVICE_NAME}
 
+# ── Prediction cache — updated every 10 minutes ────────────────────────────
+PREDICT_INTERVAL = 600   # seconds
+prediction_cache = {
+    "predicted_temp": None,
+    "alert": False,
+    "alert_message": "",
+    "threshold": 35.0,
+    "confidence": "N/A",
+    "model_loaded": False,
+    "timestamp": None,
+    "error": "Model not yet evaluated. Waiting for first prediction cycle."
+}
+
+def background_prediction_task():
+    """Refresh prediction cache every PREDICT_INTERVAL seconds."""
+    global prediction_cache
+    print("[Predictor] Background prediction thread started.")
+    time.sleep(10)  # Let the main bridge thread warm up first
+
+    while True:
+        try:
+            # Fetch last 24-hour history from Firebase
+            url    = f"{FIREBASE_DATABASE_URL}/temperatures.json"
+            params = {"orderBy": '"$key"', "limitToLast": 1440}
+            resp   = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            raw = resp.json() or {}
+
+            history = sorted(
+                [v for v in raw.values() if isinstance(v, dict)],
+                key=lambda x: x.get("timestamp", "")
+            )
+
+            result = predict_next_day(history)
+            prediction_cache = result
+
+            status_icon = "[ALERT]" if result.get("alert") else "[OK]"
+            temp_str    = f"{result.get('predicted_temp', 'N/A')} C"
+            print(f"[Predictor] {status_icon} Next-day prediction: {temp_str}")
+
+        except Exception as exc:
+            print(f"[Predictor] [ERROR] Error refreshing prediction: {exc}")
+
+        time.sleep(PREDICT_INTERVAL)
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    resp = make_response(render_template("index.html"))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 @app.route("/api/latest")
 def get_latest():
@@ -172,7 +222,7 @@ def get_history():
         history_list.sort(key=lambda x: x.get("timestamp", ""))
         return jsonify(history_list)
     except Exception as e:
-        print(f"❌ Error fetching history from Firebase: {e}")
+        print(f"[ERROR] Error fetching history from Firebase: {e}")
         return jsonify([])
 
 @app.route("/api/alert-status")
@@ -191,7 +241,35 @@ def reset_alerts():
     TemperatureAlertMonitor.reset_alerts()
     return jsonify({"status": "Alert state reset successfully"})
 
+@app.route("/predict")
+def get_prediction():
+    """API endpoint returning next-day temperature prediction."""
+    # If cache has a fresh prediction, serve it immediately
+    if prediction_cache.get("timestamp"):
+        return jsonify(prediction_cache)
+
+    # Otherwise run a synchronous prediction with current last_reading as fallback
+    readings = [last_reading] if last_reading.get("temperature") else []
+    result   = predict_next_day(readings)
+    return jsonify(result)
+
+
+@app.route("/api/model-status")
+def get_model_status():
+    """API endpoint to check if the ML model is loaded and ready."""
+    return jsonify({
+        "model_ready": is_model_ready(),
+        "last_prediction": prediction_cache
+    })
+
+
 if __name__ == "__main__":
+    # Start ThingSpeak → Firebase bridge thread
     sync_thread = threading.Thread(target=background_sync_task, daemon=True)
     sync_thread.start()
+
+    # Start ML prediction refresh thread
+    predict_thread = threading.Thread(target=background_prediction_task, daemon=True)
+    predict_thread.start()
+
     app.run(host="0.0.0.0", port=5000, debug=False)

@@ -1,234 +1,383 @@
-# Real-Time Temperature & Humidity Monitoring System
+<div align="center">
 
-A production-grade IoT dashboard built with an **ESP32 + DHT22 sensor**, **Firebase Realtime Database**, and a **Flask** backend. Features a fully redesigned dark-theme web dashboard with live charts, temperature gauge, historical statistics, and email alerting.
+<h1>🌡️ Real-Time IoT Temperature Monitoring System</h1>
 
----
+<p>
+  <strong>Production-grade IoT pipeline · ESP32 + DHT22 · Firebase · Flask · Random Forest ML</strong>
+</p>
 
-## 🚀 How to Run Everything
+<p>
+  <img src="https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Flask-Backend-black?style=for-the-badge&logo=flask"/>
+  <img src="https://img.shields.io/badge/Firebase-Realtime%20DB-orange?style=for-the-badge&logo=firebase"/>
+  <img src="https://img.shields.io/badge/ESP32-Firmware-red?style=for-the-badge&logo=espressif"/>
+  <img src="https://img.shields.io/badge/ML-Random%20Forest-green?style=for-the-badge&logo=scikit-learn"/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge"/>
+</p>
 
-Follow these steps in order to get the full system running end-to-end.
+<p>
+  <a href="#-demo">View Demo</a> ·
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-architecture">Architecture</a> ·
+  <a href="#-api-reference">API Docs</a> ·
+  <a href="#-ml-pipeline">ML Pipeline</a>
+</p>
 
-### Step 1 — Clone the repo & install dependencies
-
-```bash
-cd real-time-temp-monitoring-system-master
-pip install -r requirements.txt
-```
-
-### Step 2 — Configure your environment
-
-Copy `.env.example` to `.env`, then fill in your credentials:
-
-```bash
-copy .env.example .env   # Windows
-# or
-cp .env.example .env     # macOS / Linux
-```
-
-Open `.env` and set:
-
-```env
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
-THINGSPEAK_CHANNEL_ID=your_channel_id
-THINGSPEAK_READ_API_KEY=your_read_key
-ALERT_EMAIL=your@gmail.com
-ALERT_EMAIL_PASSWORD=your_gmail_app_password
-TEMP_THRESHOLD=35.0
-```
-
-> **Gmail note:** Use a [Gmail App Password](https://myaccount.google.com/apppasswords), not your regular password.
-
-### Step 3 — Flash the ESP32
-
-1. Open `arduino_sketch_with_alert_led.ino` in the **Arduino IDE**.
-2. Set your **Wi-Fi SSID**, **Wi-Fi Password**, and **ThingSpeak Write API Key** inside the sketch.
-3. Connect your **DHT22** to the correct GPIO pin (default: `4`).
-4. Select your board (**ESP32 Dev Module**) and the right COM port.
-5. Click **Upload**.
-
-The ESP32 will start sending temperature + humidity to **ThingSpeak** every 60 seconds automatically.
-
-### Step 4 — Start the Flask server
-
-```bash
-python -X utf8 app.py
-```
-
-You should see:
-
-```
-============================================================
-  ThingSpeak -> Firebase Bridge (Background Thread Restored)
-  ✨ EMAIL ALERT SYSTEM ENABLED
-============================================================
- * Running on http://127.0.0.1:5000
- * Running on http://0.0.0.0:5000
-```
-
-The server does two things at once:
-- **Background thread** — polls ThingSpeak every 60 s and pushes new readings to Firebase
-- **Web server** — serves the dashboard and REST API
-
-### Step 5 — Open the Dashboard
-
-Go to **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
-
-The dashboard will:
-1. Fetch the last **24 hours** of history from Firebase on load
-2. Populate the gauge, charts, stats, and table immediately
-3. Auto-refresh the latest reading every **60 seconds**
+</div>
 
 ---
 
-## 🖼️ Dashboard Preview
+## 📌 Overview
 
-The redesigned dashboard includes:
-- **Big circular temperature gauge** — animated SVG ring with blue→green gradient
-- **Live trend charts** — 1-hour rolling window, 4 × 15-minute segments
-- **Device status panel** — online/offline, last updated, uptime
-- **Historical stats** — Min/Max for last 1h / 6h / 24h pulled from Firebase
-- **Recent readings table** — timestamped rows with Normal/Warm/Alert status
+A **full-stack, real-time IoT monitoring system** that streams temperature data from an ESP32 sensor all the way to a live web dashboard — with built-in ML-powered temperature prediction, email alerting, and Firebase cloud storage.
+
+> Built as a complete Data Engineering project demonstrating end-to-end IoT → Cloud → ML → Dashboard pipeline.
+
+### Why This Project?
+
+| Problem | Our Solution |
+|---|---|
+| Raw sensor data is hard to act on | Real-time dashboard with live gauge + trend charts |
+| No early warning system | Email alerts when temperature exceeds threshold |
+| No predictive capability | Random Forest ML model predicts next temperature |
+| Data is siloed in ThingSpeak | Firebase bridge persists history for analytics |
 
 ---
 
 ## ✨ Features
 
-- 📡 **ESP32 + DHT22** — collects temperature & humidity every 60 seconds
-- ☁️ **ThingSpeak → Firebase bridge** — background Flask thread syncs data to Firebase Realtime Database
-- 🌡️ **Animated gauge** — 270° SVG arc with smooth transitions, color-coded by temperature
-- 📊 **Trend charts** — Chart.js line charts divided into 4 equal 15-minute segments
-- 📧 **Email alerts** — automatic Gmail alerts when temperature exceeds threshold
-- 🔄 **Real-time polling** — dashboard refreshes every 60 seconds via `/api/latest`
-- 📜 **History endpoint** — `/api/history` fetches last 24h of data from Firebase for stats
+- 📡 **Real-Time Streaming** — ESP32 + DHT22 pushes readings every 60 seconds via Wi-Fi
+- ☁️ **ThingSpeak → Firebase Bridge** — background Flask thread syncs data to cloud storage
+- 🌡️ **Animated Live Gauge** — 270° SVG arc with smooth transitions, color-coded by temperature
+- 📊 **Trend Charts** — Chart.js rolling 1-hour window split into 15-minute segments
+- 🤖 **ML Predictions** — Random Forest Regressor predicts next-step temperature (R² = 0.955)
+- 📧 **Smart Email Alerts** — Gmail SMTP alerts with 3-retry logic and cooldown spam protection
+- 🔄 **Auto-Refresh** — Dashboard polls for new readings every 60 seconds
+- 📜 **Historical Analytics** — Min/Max stats for 1h / 6h / 24h windows from Firebase
 
 ---
 
-## 🗂️ Project Structure
+## 🖼️ Demo
+
+| Dashboard | Live Gauge | ML Prediction Panel |
+|---|---|---|
+| Dark theme with live data | 270° animated SVG ring | Next-step temperature forecast |
+
+> Open `http://127.0.0.1:5000` after running `python app.py`
+
+---
+
+## 🏗️ Architecture
 
 ```
-├── app.py                          # Flask backend + ThingSpeak→Firebase bridge
-├── arduino_sketch_with_alert_led.ino  # ESP32 firmware
-├── requirements.txt                # Python dependencies
-├── templates/
-│   ├── index.html                  # Redesigned dark dashboard UI
-│   └── style.css                   # Legacy styles (superseded by inline Tailwind CSS)
-├── utils/
-│   └── alert_monitor.py            # Email alert logic
-└── .env                            # Environment variables (not committed)
+┌─────────────────┐
+│  ESP32 + DHT22  │  (sensor reads every 60s)
+└────────┬────────┘
+         │ Wi-Fi / HTTP
+         ▼
+┌─────────────────┐
+│   ThingSpeak    │  (IoT cloud channel, field1=Temp, field2=Humidity)
+└────────┬────────┘
+         │ REST API poll (every 60s)
+         ▼
+┌──────────────────────────────────────────┐
+│          Flask Backend (app.py)          │
+│                                          │
+│  ┌────────────────┐  ┌────────────────┐  │
+│  │ Background     │  │  Web Server    │  │
+│  │ Sync Thread    │  │  + REST API    │  │
+│  └───────┬────────┘  └───────┬────────┘  │
+└──────────┼────────────────── ┼───────────┘
+           │                   │
+           ▼                   ▼
+┌──────────────────┐  ┌────────────────────┐
+│     Firebase     │  │   ML Predictor     │
+│  Realtime DB     │  │  (Random Forest)   │
+│  /temperatures   │  │   model.pkl        │
+└──────────┬───────┘  └────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────┐
+│           Web Dashboard (UI)             │
+│   Gauge · Charts · Stats · Alerts · ML  │
+└──────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔌 Prerequisites
+    ## 🚀 Quick Start
+
+### Prerequisites
 
 | Requirement | Detail |
 |---|---|
-| Hardware | ESP32 board + DHT22 sensor |
-| Cloud | Firebase Realtime Database project |
-| Cloud | ThingSpeak channel (Channel ID + Read API Key) |
-| Email | Gmail account with App Password for alerts |
-| Software | Python 3.9+, pip |
+| **Hardware** | ESP32 Dev Board + DHT22 Temperature Sensor |
+| **Cloud** | Firebase project with Realtime Database enabled |
+| **Cloud** | ThingSpeak channel (Channel ID + Read API Key) |
+| **Email** | Gmail account + [App Password](https://myaccount.google.com/apppasswords) |
+| **Software** | Python 3.9+, Arduino IDE |
 
 ---
 
-## ⚙️ Setup & Configuration
-
-### 1. Clone & Install
+### Step 1 — Clone & Install
 
 ```bash
-cd real-time-temp-monitoring-system-master
+git clone https://github.com/your-username/real-time-temp-monitoring-system.git
+cd real-time-temp-monitoring-system
 pip install -r requirements.txt
 ```
 
-### 2. Environment Variables
+### Step 2 — Configure Environment
 
-Copy `.env.example` to `.env` and fill in your credentials:
+```bash
+# Windows
+copy .env.example .env
+
+# macOS / Linux
+cp .env.example .env
+```
+
+Edit `.env` with your credentials:
 
 ```env
 FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
 THINGSPEAK_CHANNEL_ID=your_channel_id
-THINGSPEAK_READ_API_KEY=your_read_key
+THINGSPEAK_READ_API_KEY=your_read_api_key
 ALERT_EMAIL=your@gmail.com
-ALERT_EMAIL_PASSWORD=your_app_password
+ALERT_EMAIL_PASSWORD=your_gmail_app_password
 TEMP_THRESHOLD=35.0
+PREDICT_THRESHOLD=38.0
 ```
 
-### 3. Arduino Setup
+> **Gmail:** Use an [App Password](https://myaccount.google.com/apppasswords) — not your login password.
 
-1. Open `arduino_sketch_with_alert_led.ino` in Arduino IDE.
-2. Set your Wi-Fi SSID, password, and ThingSpeak Write API Key inside the sketch.
-3. Upload to your ESP32 board.
+### Step 3 — Flash the ESP32
 
-### 4. Run the Flask Server
+1. Open `arduino_sketch_with_alert_led.ino` in **Arduino IDE**
+2. Set your **Wi-Fi SSID**, **Wi-Fi Password**, and **ThingSpeak Write API Key**
+3. Connect **DHT22** to GPIO pin `4` (default)
+4. Select board: **ESP32 Dev Module** → correct COM port
+5. Click **Upload**
+
+The ESP32 will push `temperature` + `humidity` to ThingSpeak every **60 seconds**.
+
+### Step 4 — Train the ML Model
 
 ```bash
-python -X utf8 app.py
+# Generate Indian IoT temperature training data
+python data/generate_dataset.py
+
+# Train the Random Forest model
+python ml/train_model.py
 ```
 
-> **Note:** The `-X utf8` flag ensures emoji characters in logs display correctly on Windows.
+Expected output:
+```
+  MAE  (Mean Absolute Error)  : 0.955 °C
+  RMSE (Root Mean Sq. Error)  : 1.208 °C
+  R2   (Coefficient of Det.)  : 0.9551
+```
 
-### 5. Open the Dashboard
+### Step 5 — Run the Flask Server
 
-Navigate to **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
+```bash
+python app.py
+```
+
+```
+============================================================
+  ThingSpeak -> Firebase Bridge  (Background Thread Active)
+  EMAIL ALERT SYSTEM ENABLED
+============================================================
+ * Running on http://127.0.0.1:5000
+```
+
+### Step 6 — Open Dashboard
+
+Navigate to **[http://127.0.0.1:5000](http://127.0.0.1:5000)** 🎉
 
 ---
 
-## 🌐 API Endpoints
+## 📁 Project Structure
+
+```
+real-time-temp-monitoring-system/
+│
+├── app.py                              # Flask backend + ThingSpeak→Firebase bridge
+├── arduino_sketch_with_alert_led.ino  # ESP32 firmware (DHT22 + ThingSpeak)
+├── requirements.txt                   # Python dependencies
+├── .env.example                       # Environment variable template
+│
+├── data/
+│   ├── generate_dataset.py            # Indian IoT temperature dataset generator
+│   └── iot_temp_india.csv             # Generated training dataset (2 years, hourly)
+│
+├── ml/
+│   ├── train_model.py                 # Random Forest training script
+│   ├── preprocess.py                  # Data cleaning + feature engineering pipeline
+│   ├── model.pkl                      # Trained Random Forest model
+│   └── scaler.pkl                     # MinMaxScaler for inference
+│
+├── utils/
+│   ├── predictor.py                   # ML inference — predict_next_day()
+│   └── alert_monitor.py              # Email alert logic (SMTP + cooldown)
+│
+└── templates/
+    └── index.html                     # Dark-theme dashboard (Chart.js + SVG gauge)
+```
+
+---
+
+## 🤖 ML Pipeline
+
+The prediction system uses a **Random Forest Regressor** trained on realistic Indian indoor temperature data.
+
+### Model Details
+
+| Parameter | Value |
+|---|---|
+| Algorithm | `RandomForestRegressor` (scikit-learn) |
+| Trees | 150 estimators |
+| Max Depth | 12 |
+| Features | `[temperature, hour, day_of_week, month, day_of_year]` |
+| Target | `next_temperature` (next-step forecast) |
+| Training Data | 17,520 hourly readings (Indian climate, 2022–2023) |
+| **MAE** | **0.955°C** |
+| **RMSE** | **1.208°C** |
+| **R²** | **0.9551** |
+
+### Feature Importances
+
+```
+temperature     ████████████████████  52.2%
+day_of_year     ████████              20.0%
+month           ███████               18.9%
+hour            ████                   8.8%
+day_of_week                            0.2%
+```
+
+### How to Retrain
+
+```bash
+python data/generate_dataset.py   # regenerate dataset
+python ml/train_model.py          # retrain model
+python app.py                     # restart server to load new model
+```
+
+---
+
+## 🌐 API Reference
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/` | Main dashboard UI |
 | `GET` | `/api/latest` | Latest sensor reading from memory |
 | `GET` | `/api/history` | Last 24h of readings from Firebase |
+| `GET` | `/predict` | ML temperature prediction + alert status |
 | `GET` | `/api/alert-status` | Current alert system state |
-| `GET` | `/api/alert-history` | List of all sent alerts |
-| `POST` | `/api/reset-alerts` | Reset alert cooldown (admin) |
+| `GET` | `/api/alert-history` | List of all sent email alerts |
+| `POST` | `/api/reset-alerts` | Reset alert cooldown (admin use) |
+
+### Sample Response — `/api/latest`
+
+```json
+{
+  "temperature": 34.2,
+  "humidity": 61.5,
+  "timestamp": "2024-04-24T14:05:00",
+  "status": "Warm"
+}
+```
+
+### Sample Response — `/predict`
+
+```json
+{
+  "predicted_temp": 36.8,
+  "alert": false,
+  "alert_message": "Next-step forecast 36.8°C is within safe range (< 38°C).",
+  "confidence": "±1.2°C",
+  "model_loaded": true,
+  "threshold": 38.0
+}
+```
 
 ---
 
-## 📊 How Data Flows
+## 🎨 Dashboard UI
 
-```
-ESP32 + DHT22
-    │  (every 60s via Wi-Fi)
-    ▼
-ThingSpeak Channel
-    │  (Flask background thread polls every 60s)
-    ▼
-Firebase Realtime Database  (/temperatures)
-    │  (browser fetches on load + every 60s)
-    ▼
-Flask /api/latest  &  /api/history
-    │
-    ▼
-Dashboard UI  →  Gauge + Charts + Stats + Table
-```
-
----
-
-## 🎨 Dashboard UI Highlights
-
-- **Theme:** Soft dark (`#0D1117` bg, `#161C27` cards)
-- **Colors:** Blue `#3B82F6` (temp) + Green `#10B981` (humidity/live)
-- **Gauge:** 270° SVG arc, blue→green gradient; white dot tracks current value
-- **Charts:** 1-hour rolling window split into **4 × 15-minute segments** on X-axis
-- **Stats:** Min/Max computed from Firebase history (1h / 6h / 24h buckets)
-- **Table:** Last 50 readings; status = Normal / Warm (≥30°C) / Alert (≥35°C)
+| Feature | Detail |
+|---|---|
+| **Theme** | Dark — `#0D1117` background, `#161C27` cards |
+| **Gauge** | 270° SVG arc, blue→green gradient, animated needle |
+| **Charts** | Chart.js rolling 1-hour window, 4 × 15-min segments |
+| **Stats Panel** | Min/Max for 1h / 6h / 24h from Firebase |
+| **ML Panel** | Predicted next temperature + confidence interval |
+| **Status Table** | Last 50 readings — `Normal` / `Warm` / `Alert` |
 
 ---
 
 ## 📧 Email Alert System
 
-Alerts are sent via Gmail SMTP when temperature exceeds the configured threshold:
-- 3 automatic retries on failure
-- Cooldown period to avoid alert spam
-- Alert history accessible via `/api/alert-history`
+Alerts fire via Gmail SMTP when temperature exceeds `TEMP_THRESHOLD`:
+
+- ✅ **3 automatic retries** on connection failure
+- ✅ **Cooldown period** prevents alert spam
+- ✅ **Alert history** accessible at `/api/alert-history`
+- ✅ **Predictive alerts** — warns before threshold is hit using ML forecast
 
 ---
 
-## 📝 Notes
+## ⚙️ Configuration Reference
 
-- Ensure your ESP32 connects to a **2.4 GHz** Wi-Fi network (not 5 GHz).
-- Firebase rules must allow **unauthenticated read** for the `/temperatures` node (or configure auth accordingly).
-- The ThingSpeak channel must have `field1` = Temperature, `field2` = Humidity.
-- For production, replace the Flask dev server with **Gunicorn** or **uWSGI**.
+| Variable | Default | Description |
+|---|---|---|
+| `FIREBASE_DATABASE_URL` | — | Firebase Realtime DB URL |
+| `THINGSPEAK_CHANNEL_ID` | — | ThingSpeak channel number |
+| `THINGSPEAK_READ_API_KEY` | — | ThingSpeak read API key |
+| `ALERT_EMAIL` | — | Gmail address to send alerts from |
+| `ALERT_EMAIL_PASSWORD` | — | Gmail App Password |
+| `TEMP_THRESHOLD` | `35.0` | Alert trigger temperature (°C) |
+| `PREDICT_THRESHOLD` | `38.0` | ML predictive alert threshold (°C) |
+
+---
+
+## 📋 Notes & Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| ESP32 won't connect | Ensure 2.4 GHz Wi-Fi (not 5 GHz) |
+| Firebase permission denied | Enable unauthenticated read on `/temperatures` node |
+| ThingSpeak not syncing | Verify `field1`=Temperature, `field2`=Humidity in channel |
+| Email not sending | Use Gmail App Password, enable 2FA on Gmail account |
+| Model predictions wrong | Retrain: `python data/generate_dataset.py && python ml/train_model.py` |
+| Python encoding error | Run with: `python -X utf8 app.py` |
+
+---
+
+## 🛠️ Tech Stack
+
+<p>
+  <img src="https://img.shields.io/badge/ESP32-Espressif-red?style=flat-square&logo=espressif"/>
+  <img src="https://img.shields.io/badge/Python-Flask-black?style=flat-square&logo=flask"/>
+  <img src="https://img.shields.io/badge/Firebase-Realtime%20DB-orange?style=flat-square&logo=firebase"/>
+  <img src="https://img.shields.io/badge/ThingSpeak-IoT%20Cloud-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Scikit--Learn-ML-green?style=flat-square&logo=scikit-learn"/>
+  <img src="https://img.shields.io/badge/Chart.js-Visualization-pink?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Gmail-SMTP%20Alerts-red?style=flat-square&logo=gmail"/>
+</p>
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+  <p>Made with ❤️ | IoT + ML + Real-Time Data Engineering</p>
+  <p>
+    <a href="https://github.com/kuldeeprathod1305">@kuldeeprathod1305</a>
+  </p>
+</div>
