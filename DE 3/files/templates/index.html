@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Monitoring System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1000px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-title {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .card-unit {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .card.alert-high {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .card.alert-low {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .api-section {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .api-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .api-endpoint {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            color: #d63384;
+            margin: 5px 0;
+            word-break: break-all;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.2s ease;
+            text-decoration: none;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .card-value {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌡️ Temperature Monitoring System</h1>
+            <p>Real-time data from ThingSpeak • Predictions powered by ML</p>
+        </div>
+
+        <!-- Status Cards -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Current Temperature</div>
+                <div class="card-value" id="temperature">--</div>
+                <div class="card-unit">°C</div>
+                <div id="temp-status" class="status"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Current Humidity</div>
+                <div class="card-value" id="humidity">--</div>
+                <div class="card-unit">%</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Last Update</div>
+                <div class="card-value" id="timestamp" style="font-size: 1.2em;">--</div>
+                <div class="card-unit">IST</div>
+            </div>
+        </div>
+
+        <!-- System Status Section -->
+        <div class="section">
+            <h2 class="section-title">📊 System Status</h2>
+            <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <p><strong>Backend Status:</strong> <span class="status active">🟢 Active</span></p>
+                <p><strong>Data Source:</strong> ThingSpeak Channel #3134042</p>
+                <p><strong>Database:</strong> Firebase Realtime Database</p>
+                <p><strong>Email Alerts:</strong> <span class="status active">✨ Enabled</span></p>
+                <p><strong>Temperature Prediction:</strong> <span class="status active">🔮 Enabled</span></p>
+                <p><strong>Alert Monitor:</strong> <span class="status active">🔔 Active</span></p>
+            </div>
+        </div>
+
+        <!-- API Documentation Section -->
+        <div class="section">
+            <h2 class="section-title">📡 API Endpoints</h2>
+
+            <div class="api-section">
+                <div class="api-title">🌡️ Latest Reading</div>
+                <div class="api-endpoint">GET /api/latest</div>
+                <p style="margin-top: 10px; color: #666;">Returns the most recent temperature and humidity reading</p>
+            </div>
+
+            <div class="api-section">
+                <div class="api-title">📈 Historical Data</div>
+                <div class="api-endpoint">GET /api/history</div>
+                <p style="margin-top: 10px; color: #666;">Returns 24 hours of historical temperature data</p>
+            </div>
+
+            <div class="api-section">
+                <div class="api-title">🔮 Single Prediction</div>
+                <div class="api-endpoint">GET /api/predict?minutes_ahead=30</div>
+                <p style="margin-top: 10px; color: #666;">Predicts temperature N minutes ahead with confidence score</p>
+            </div>
+
+            <div class="api-section">
+                <div class="api-title">📊 24-Hour Forecast</div>
+                <div class="api-endpoint">GET /api/predict/24h-forecast</div>
+                <p style="margin-top: 10px; color: #666;">Generates hourly predictions for the next 24 hours</p>
+            </div>
+
+            <div class="api-section">
+                <div class="api-title">🎯 Moving Average</div>
+                <div class="api-endpoint">GET /api/predict/moving-average</div>
+                <p style="margin-top: 10px; color: #666;">Returns smoothed temperature data using moving average</p>
+            </div>
+
+            <div class="api-section">
+                <div class="api-title">⚠️ Alert History</div>
+                <div class="api-endpoint">GET /api/alert-history</div>
+                <p style="margin-top: 10px; color: #666;">Returns all temperature alerts from the last 24 hours</p>
+            </div>
+        </div>
+
+        <!-- Quick Test Section -->
+        <div class="section">
+            <h2 class="section-title">⚡ Quick Actions</h2>
+            <button class="btn" onclick="fetchLatest()">Fetch Latest Reading</button>
+            <button class="btn btn-secondary" onclick="fetchHistory()">Get History</button>
+            <button class="btn btn-secondary" onclick="fetchPrediction()">Get Prediction (30 min)</button>
+            <button class="btn btn-secondary" onclick="fetch24hForecast()">24h Forecast</button>
+        </div>
+
+        <div id="response" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3 style="color: #333; margin-bottom: 10px;">API Response:</h3>
+            <pre id="response-text" style="background: white; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.9em;"></pre>
+        </div>
+
+        <footer>
+            <p>Temperature Monitoring System • Powered by Flask, ThingSpeak, and Firebase</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Data refreshes every 60 seconds</p>
+        </footer>
+    </div>
+
+    <script>
+        // Auto-update data every 30 seconds
+        function autoUpdate() {
+            fetchLatest();
+            setInterval(fetchLatest, 30000);
+        }
+
+        function fetchLatest() {
+            fetch('/api/latest')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('temperature').textContent = 
+                        (data.temperature || '--').toFixed(1);
+                    document.getElementById('humidity').textContent = 
+                        (data.humidity || '--').toFixed(1);
+                    
+                    const temp = data.temperature;
+                    const status = document.getElementById('temp-status');
+                    if (temp > 35) {
+                        status.textContent = '🔴 High Temperature';
+                        status.className = 'status alert-high';
+                    } else if (temp < 15) {
+                        status.textContent = '❄️ Low Temperature';
+                        status.className = 'status alert-low';
+                    } else {
+                        status.textContent = '✅ Normal Range';
+                        status.className = 'status';
+                    }
+                    
+                    const ts = data.ts_timestamp || new Date().toLocaleString('en-IN');
+                    document.getElementById('timestamp').textContent = ts.substring(11, 19);
+                    
+                    showResponse(JSON.stringify(data, null, 2));
+                })
+                .catch(err => console.error('Error:', err));
+        }
+
+        function fetchHistory() {
+            fetch('/api/history')
+                .then(res => res.json())
+                .then(data => {
+                    showResponse(`Retrieved ${data.length} historical records`);
+                    console.log('History:', data);
+                })
+                .catch(err => console.error('Error:', err));
+        }
+
+        function fetchPrediction() {
+            fetch('/api/predict?minutes_ahead=30')
+                .then(res => res.json())
+                .then(data => showResponse(JSON.stringify(data, null, 2)))
+                .catch(err => showResponse('Error: ' + err));
+        }
+
+        function fetch24hForecast() {
+            fetch('/api/predict/24h-forecast')
+                .then(res => res.json())
+                .then(data => showResponse(JSON.stringify(data, null, 2)))
+                .catch(err => showResponse('Error: ' + err));
+        }
+
+        function showResponse(text) {
+            document.getElementById('response-text').textContent = text;
+            document.getElementById('response').style.display = 'block';
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', autoUpdate);
+    </script>
+</body>
+</html>
